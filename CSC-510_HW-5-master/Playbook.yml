@@ -1,0 +1,52 @@
+---
+- hosts: nodes
+  become: yes
+
+  tasks:
+    - name: Install git
+      apt: pkg=git state=present
+
+    - name: node installation
+      apt: pkg=nodejs state=present
+
+    - name: npm installation
+      apt: pkg=npm state=present
+
+    - name: EXPORT PATH IF ERROR
+      shell: export PATH=$PATH:/usr/bin
+
+    - name: "Installing NPM package: FOREVER (to run Node.js app)."
+      npm: name=forever global=yes state=present
+
+    - name: "Check list of Node.js apps running."
+      command: forever list
+      register: forever_list
+      changed_when: false
+
+    - name: See Console
+      debug: var=forever_list.stdout_lines
+
+    - name: forever installation
+      npm: name=forever global=yes state=present
+      become: yes
+
+    - name: Clone task
+      git: repo=git://github.com/CSC-DevOps/App.git dest=/Repository clone=yes update=yes
+
+    - name: npm install package
+      npm: path=/Repository state=latest
+
+    - name: Run app forever
+      command: forever start /Repository/main.js 80
+      changed_when: false
+
+    - name: Security
+      apt: name={{ item }} state=latest
+      with_items:
+       - bash
+       - openssl
+       - openssh-client
+       - openssh-server
+
+    - name: Clean /tmp*
+      file: path=/tmp state=absent
